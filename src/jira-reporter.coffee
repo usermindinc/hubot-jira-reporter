@@ -284,7 +284,6 @@ generateFreeAgentsReport = (users) ->
   return "Free agents: #{users.map((user) -> user.name).join(', ')}"
 
 generateClosedStoriesReport = (stories) ->
-  console.log "stories: #{stories}"
   renderedStories = stories.map (issue) ->
     return "\t#{issue.key} #{issue.fields.summary}"
   return "Recently closed stories: \n#{renderedStories.join('\n')}"
@@ -354,8 +353,5 @@ module.exports = (robot) ->
 
     fetchAndGenerate(robot, fetchAllReports, generateAllReports)
       .then (reports) ->
-        console.log reports
-        reports.map (report) ->
+        reports.forEach (report) ->
           res.send report
-      .catch (whoops) ->
-        res.send "nooooppe #{whoops.message}"
