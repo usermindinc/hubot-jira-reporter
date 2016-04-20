@@ -17,7 +17,7 @@
 
 btoa       = require 'btoa'
 # cronParser = require 'cron-parser'
-# moment     = require 'moment'
+moment     = require 'moment'
 # schedule   = require 'node-schedule'
 # Promise    = require 'promise'
 # _          = require 'underscore'
@@ -175,6 +175,13 @@ fetchInProgressSubtasks = (robot) ->
 # generate*Report methods all return a string with a specific report type
 #
 generateInProgressReport = (inProgressIssues) ->
+  # Example output:
+  #
+  # In Progress tasks:
+  #   * @assigned - 3h remaining on ID - Title
+  #   * @assigned - 16h remaining on ID - Title
+  #      \-> Not updated since yesterday. http://link
+  #   * *unassigned* - 30h remaining -
   sortedIssues = inProgressIssues.sort (leftIssue, rightIssue) ->
     leftAssignee = leftIssue.fields.assignee.key
     rightAssignee = rightIssue.fields.assignee.key
@@ -184,8 +191,35 @@ generateInProgressReport = (inProgressIssues) ->
       return 1
     return 0
   renderedList = sortedIssues.map (issue) ->
+    # Useful computed data
+    issueLink = "#{jiraUrl}/browse/#{issue.key}"
     secondsLeft = issue.fields.progress.total - issue.fields.progress.progress
-    renderedIssue = "\t#{issue.fields.assignee.name} - #{secondsLeft}s remaining - #{issue.key}"
+
+    assigneeString = issue.fields.assignee.name
+    timeRemaining = "#{moment.duration(secondsLeft, 'seconds') .asHours()}h remaining"
+
+    # Issue warnings
+    hasntBeenUpdatedIn24hours = false
+    isUnassigned = false
+    shouldBeResolved = secondsLeft <= 0
+
+    # Bold any concerning fields
+    if isUnassigned
+      assigneeString = "*#{assigneeString}*"
+    if secondsLeft <= 0
+      timeRemaining = "*#{timeRemaining}*"
+
+    # Main line rendering
+    renderedIssue = "\t#{issue.fields.assignee.displayName} - #{timeRemaining} - #{issue.key}"
+
+    # Show any warnings with the issue link
+    if hasntBeenUpdatedIn24hours
+      renderedIssue += "\n\t\t↳ This hasn't been updated since yesterday. #{issueLink}"
+    else if isUnassigned
+      renderedIssue += "\n\t\t↳ Who's working on this? #{issueLink}"
+    else if shouldBeResolved
+      renderedIssue += "\n\t\t↳ Should this be marked as Completed? #{issueLink}"
+
     return renderedIssue
 
   return "In progress tasks:\n#{renderedList.join('\n')}"
@@ -211,17 +245,10 @@ module.exports = (robot) ->
   robot.respond /show jira in progress/i, (res) ->
     fetchInProgressSubtasks(robot)
       .then (subtasks) ->
-        # console.log "subtasks are #{subtasks.length}"
         report = generateInProgressReport(subtasks)
-        # console.log report
         res.send report
       .catch (error) ->
         res.send "Whoops. #{error.message}"
-    # In Progress tasks:
-    #   * @assigned - 3h remaining on ID - Title
-    #   * @assigned - 16h remaining on ID - Title
-    #      \-> Not updated since yesterday. http://link
-    #   * *unassigned* - 30h remaining -
 
   robot.respond /check/i, (res) ->
     if !isConfiguredCorrectly(res)

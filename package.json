@@ -13,7 +13,8 @@
     "url": "https://github.com/hubot-scripts/hubot-jira-reporter/issues"
   },
   "dependencies": {
-    "btoa": "^1.1.2"
+    "btoa": "^1.1.2",
+    "moment": "^2.13.0"
   },
   "peerDependencies": {
     "hubot": "2.x"
