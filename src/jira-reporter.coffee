@@ -239,7 +239,7 @@ generateInProgressReport = (inProgressIssues) ->
     # Useful computed data
     issueLink = "#{jiraUrl}/browse/#{issue.key}"
     secondsLeft = issue.fields.progress.total - issue.fields.progress.progress
-    updatedAgo = moment.duration(moment().diff(moment('2016-04-19T15:27:58.000-0700')))
+    updatedAgo = moment.duration(moment().diff(moment(issue.fields.updated)))
 
     if issue.fields.assignee?
       assigneeString = issue.fields.assignee.name
