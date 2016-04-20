@@ -155,21 +155,36 @@ fetchUsers = (robot) ->
         reject error
 
 fetchInProgressSubtasks = (robot) ->
-
-  return fetchSprints(robot)
+  fetchSprints(robot)
     .then (sprints) ->
       sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
-      jql = "project in (#{projectId}) AND issuetype = Sub-task AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
+      jql = "project in (#{projectId}) AND issuetype in subTaskIssueTypes() AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
       requestUrl = "/rest/api/2/search?jql=#{jql}"
 
       new Promise (resolve, reject) ->
         getFromJira robot, requestUrl, (err, resp, body) ->
-            try
-              bodyObj = JSON.parse(body)
-              issues = bodyObj.issues || []
-              resolve issues
-            catch error
-              reject error
+          try
+            bodyObj = JSON.parse(body)
+            issues = bodyObj.issues || []
+            resolve issues
+          catch error
+            reject error
+
+fetchRecentlyClosedStories = (robot) ->
+  fetchSprints(robot)
+    .then (sprints) ->
+      sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
+      jql = "project in (#{projectId}) AND issuetype in standardIssueTypes() AND status in (Resolved, Closed) AND Sprint in (#{sprintIds}) AND updated >= -24h"
+      requestUrl = "/rest/api/2/search?jql=#{jql}"
+
+      new Promise (resolve, reject) ->
+        getFromJira robot, requestUrl, (err, resp, body) ->
+          try
+            bodyObj = JSON.parse(body)
+            issues = bodyObj.issues || []
+            resolve issues
+          catch error
+            reject error
 #
 # generate*Report methods all return a string with a specific report type
 #
@@ -240,6 +255,10 @@ generateInProgressReport = (inProgressIssues) ->
 
 generateFreeAgentsReport = (users) ->
   return "Free agents: #{users.map((user) -> user.name).join(', ')}"
+
+generateClosedStoriesReport = (stories) ->
+  return "Recently closed stories: #{stories.length}"
+
 #
 # Robot listening registry
 #
@@ -288,6 +307,9 @@ module.exports = (robot) ->
                   return false
             res.send generateFreeAgentsReport(freeAgents)
 
-  robot.respond /check/i, (res) ->
+  robot.respond /show jira closed stories/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
+    fetchRecentlyClosedStories(robot)
+      .then (stories) ->
+        res.send generateClosedStoriesReport(stories)
