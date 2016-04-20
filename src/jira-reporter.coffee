@@ -281,7 +281,7 @@ generateInProgressReport = (inProgressIssues) ->
   return "In progress tasks:\n#{renderedList.join('\n')}"
 
 generateFreeAgentsReport = (users) ->
-  return "Free agents: #{users.map((user) -> user.name).join(', ')}"
+  return "Free agents:\n\t#{users.map((user) -> user.name).join(', ')}"
 
 generateClosedStoriesReport = (stories) ->
   renderedStories = stories.map (issue) ->
