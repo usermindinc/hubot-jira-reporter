@@ -183,24 +183,39 @@ generateInProgressReport = (inProgressIssues) ->
   #      \-> Not updated since yesterday. http://link
   #   * *unassigned* - 30h remaining -
   sortedIssues = inProgressIssues.sort (leftIssue, rightIssue) ->
-    leftAssignee = leftIssue.fields.assignee.key
-    rightAssignee = rightIssue.fields.assignee.key
-    if leftAssignee < rightAssignee
-      return -1
-    else if leftAssignee > rightAssignee
-      return 1
-    return 0
+    leftAssignee = leftIssue.fields.assignee
+    rightAssignee = rightIssue.fields.assignee
+    if leftAssignee?
+      if rightAssignee?
+        # We have 2 actual users. Let's compare keys.
+        if leftAssignee.key < rightAssignee.key
+          return -1
+        else if leftAssignee > rightAssignee
+          return 1
+        return 0
+      else
+        return 1
+    else
+      if rightAssignee?
+        return -1
+      return 0
+
+
   renderedList = sortedIssues.map (issue) ->
     # Useful computed data
     issueLink = "#{jiraUrl}/browse/#{issue.key}"
     secondsLeft = issue.fields.progress.total - issue.fields.progress.progress
+    updatedAgo = moment.duration(moment().diff(moment('2016-04-19T15:27:58.000-0700')))
 
-    assigneeString = issue.fields.assignee.name
+    if issue.fields.assignee?
+      assigneeString = issue.fields.assignee.name
+    else
+      assigneeString = "unassigned"
     timeRemaining = "#{moment.duration(secondsLeft, 'seconds') .asHours()}h remaining"
 
     # Issue warnings
-    hasntBeenUpdatedIn24hours = false
-    isUnassigned = false
+    hasntBeenUpdatedIn24hours = updatedAgo.asHours() > 24
+    isUnassigned = !issue.fields.assignee?
     shouldBeResolved = secondsLeft <= 0
 
     # Bold any concerning fields
@@ -210,15 +225,15 @@ generateInProgressReport = (inProgressIssues) ->
       timeRemaining = "*#{timeRemaining}*"
 
     # Main line rendering
-    renderedIssue = "\t#{issue.fields.assignee.displayName} - #{timeRemaining} - #{issue.key}"
+    renderedIssue = "\t#{assigneeString} - #{timeRemaining} - #{issue.key}"
 
     # Show any warnings with the issue link
-    if hasntBeenUpdatedIn24hours
-      renderedIssue += "\n\t\t↳ This hasn't been updated since yesterday. #{issueLink}"
+    if shouldBeResolved
+      renderedIssue += "\n\t\t↳ Should this be marked as Completed? #{issueLink}"
     else if isUnassigned
       renderedIssue += "\n\t\t↳ Who's working on this? #{issueLink}"
-    else if shouldBeResolved
-      renderedIssue += "\n\t\t↳ Should this be marked as Completed? #{issueLink}"
+    else if hasntBeenUpdatedIn24hours
+      renderedIssue += "\n\t\t↳ This hasn't been updated since yesterday. #{issueLink}"
 
     return renderedIssue
 
