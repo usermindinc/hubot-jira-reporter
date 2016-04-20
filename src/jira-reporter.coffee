@@ -24,6 +24,7 @@ btoa       = require 'btoa'
 
 jiraUrl = process.env.HUBOT_JIRA_URL
 projectId = process.env.HUBOT_JIRA_PROJECT_ID
+userGroup = process.env.HUBOT_JIRA_REPORT_USER_GROUP
 authPayload = () ->
   username = process.env.HUBOT_JIRA_USERNAME
   password = process.env.HUBOT_JIRA_PASSWORD
@@ -96,7 +97,6 @@ fetchSprints = (robot) ->
   requestUrl = "#{jiraUrl}/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
 
   return new Promise (resolve, reject) ->
-
     robot.http(requestUrl)
       .header('Authorization', "Basic #{authPayload()}")
       .get() (err, resp, body) ->
@@ -107,6 +107,51 @@ fetchSprints = (robot) ->
         catch error
           reject error
 
+fetchUser = (robot, user) ->
+  requestUrl = "#{jiraUrl}/rest/api/2/user?key=#{user.key}&expand=groups"
+
+  return new Promise (resolve, reject) ->
+    robot.http(requestUrl)
+      .header('Authorization', "Basic #{authPayload()}")
+      .get() (err, resp, body) ->
+        try
+          user = JSON.parse(body)
+          resolve user
+        catch error
+          reject error
+
+fetchUsers = (robot) ->
+  # The correct way to get users by a group is with the /group?groupname=developers API.
+  # Unfortunately, that requires the caller to have admin priviledges. This makes tons of
+  # calls to the /user api to filter down to the userGroup, if it exists.
+  requestUrl = "#{jiraUrl}/rest/api/2/user/assignable/search?project=#{projectId}"
+
+  return new Promise (resolve, reject) ->
+    robot.http(requestUrl)
+      .header('Authorization', "Basic #{authPayload()}")
+      .get() (err, resp, body) ->
+        try
+          users = JSON.parse(body)
+
+          if userGroup?
+            # Filter by userGroup if it exists
+            userPromises = users.map (user) ->
+              return fetchUser(robot, user)
+            Promise.all(userPromises)
+              .then (users) ->
+                filteredUsers = users.filter (user) ->
+                  groups = user.groups.items || []
+                  groups.find (group) ->
+                    group.name == userGroup
+
+                resolve filteredUsers
+              .catch (error) ->
+                reject error
+
+          else
+            resolve users
+        catch error
+          reject error
 
 #
 # Robot listening registry
@@ -117,6 +162,15 @@ module.exports = (robot) ->
     fetchSprints(robot)
       .then (sprints) ->
         res.send "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
+      .catch (error) ->
+        res.send "Whoops. #{error.message}"
+
+  robot.respond /show jira users/i, (res) ->
+    fetchUsers(robot)
+      .then (users) ->
+        res.send "Users: #{users.map((user) -> user.name).join(', ')}"
+      .catch (error) ->
+        res.send "Whoops. #{error.message}"
 
   robot.respond /check/i, (res) ->
     if !isConfiguredCorrectly(res)
