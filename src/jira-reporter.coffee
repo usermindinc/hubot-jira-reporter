@@ -185,6 +185,7 @@ fetchRecentlyClosedStories = (robot) ->
             resolve issues
           catch error
             reject error
+
 #
 # generate*Report methods all return a string with a specific report type
 #
@@ -257,7 +258,9 @@ generateFreeAgentsReport = (users) ->
   return "Free agents: #{users.map((user) -> user.name).join(', ')}"
 
 generateClosedStoriesReport = (stories) ->
-  return "Recently closed stories: #{stories.length}"
+  renderedStories = stories.map (issue) ->
+    return "\t#{issue.key} #{issue.fields.summary}"
+  return "Recently closed stories: \n#{renderedStories.join('\n')}"
 
 #
 # Robot listening registry
