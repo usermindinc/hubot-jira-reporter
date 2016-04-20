@@ -237,12 +237,17 @@ generateInProgressReport = (inProgressIssues) ->
     return renderedIssue
 
   return "In progress tasks:\n#{renderedList.join('\n')}"
+
+generateFreeAgentsReport = (users) ->
+  return "Free agents: #{users.map((user) -> user.name).join(', ')}"
 #
 # Robot listening registry
 #
 module.exports = (robot) ->
 
   robot.respond /show jira sprints/i, (res) ->
+    if !isConfiguredCorrectly(res)
+      return
     fetchSprints(robot)
       .then (sprints) ->
         res.send "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
@@ -250,6 +255,8 @@ module.exports = (robot) ->
         res.send "Whoops. #{error.message}"
 
   robot.respond /show jira users/i, (res) ->
+    if !isConfiguredCorrectly(res)
+      return
     fetchUsers(robot)
       .then (users) ->
         res.send "Users: #{users.map((user) -> user.name).join(', ')}"
@@ -257,6 +264,8 @@ module.exports = (robot) ->
         res.send "Whoops. #{error.message}"
 
   robot.respond /show jira in progress/i, (res) ->
+    if !isConfiguredCorrectly(res)
+      return
     fetchInProgressSubtasks(robot)
       .then (subtasks) ->
         report = generateInProgressReport(subtasks)
@@ -264,22 +273,21 @@ module.exports = (robot) ->
       .catch (error) ->
         res.send "Whoops. #{error.message}"
 
+  robot.respond /show jira free agents/i, (res) ->
+    if !isConfiguredCorrectly(res)
+      return
+    fetchUsers(robot)
+      .then (users) ->
+        fetchInProgressSubtasks(robot)
+          .then (subtasks) ->
+            freeAgents = users.filter (user) ->
+              !subtasks.find (issue) ->
+                if issue.fields.assignee?
+                  return issue.fields.assignee.key == user.key
+                else
+                  return false
+            res.send generateFreeAgentsReport(freeAgents)
+
   robot.respond /check/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-
-
-    # Find the currently open Sprint
-
-
-    data =
-      jql: "project in (#{projectId}) AND status = \"In Progress\" AND Sprint in (80)"
-      fields: 'key'
-    requestUrl = "/rest/api/2/search?jql=#{data.jql}&fields=#{data.fields}"
-
-    getFromJira robot, requestUrl, (err, resp, body)->
-      bodyObj = JSON.parse(body)
-      howMany = bodyObj.total
-      res.send "Found #{howMany} issues: #{bodyObj.issues.length}"
-
-      res.send bodyObj.issues.map( (issue) -> issue.key ).join(', ')
