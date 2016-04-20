@@ -16,11 +16,11 @@
 
 
 btoa       = require 'btoa'
-cronParser = require 'cron-parser'
-moment     = require 'moment'
-schedule   = require 'node-schedule'
-Promise    = require 'promise'
-_          = require 'underscore'
+# cronParser = require 'cron-parser'
+# moment     = require 'moment'
+# schedule   = require 'node-schedule'
+# Promise    = require 'promise'
+# _          = require 'underscore'
 
 jiraUrl = process.env.HUBOT_JIRA_URL
 projectId = process.env.HUBOT_JIRA_PROJECT_ID
@@ -34,9 +34,6 @@ authPayload = () ->
     return null
 
 
-#
-# Robot listening registry
-#
 
 # 4 questions
 # 1. Does everyone have something in progress?
@@ -44,7 +41,39 @@ authPayload = () ->
 # 3. What *stories* have been closed in the last day?
 # 4. Have all in-progress issues had their time tracking updated?
 
+# what sprints are active?
+# who's in jira?
+#
+# Interactions!!
+# show jira closed stories
+# Closed Stories:
+#   * ID - Title
+#   * ID - Title
+#
+# show jira in progress
+# In Progress tasks:
+#   * @assigned - 3h remaining on ID - Title
+#   * @assigned - 16h remaining on ID - Title
+#      \-> Not updated since yesterday. http://link
+#   * *unassigned* - 30h remaining -
+#
+# show jira free agents
+# Free agents: Sullins, Maclemnore, Lacoste
+#
+# show jira report
+# Closed Stories:
+#   * ID - Title
+#   * ID - Title
+# In Progress tasks:
+#   * @assigned - 3h remaining on ID - Title
+#   * @assigned - 16h remaining on ID - Title
+#      \-> Not updated since yesterday. http://link
+#   * *unassigned* - 30h remaining -
+# Free agents: Sullins, Maclemnore, Lacoste
 
+
+
+# Check if all the required environment variables have been set.
 isConfiguredCorrectly = (res) ->
   errors = []
 
@@ -62,12 +91,40 @@ isConfiguredCorrectly = (res) ->
     return false
   return true
 
+fetchSprints = (robot) ->
+  sprintsJql = "project = #{projectId} and Sprint not in closedSprints()"
+  requestUrl = "#{jiraUrl}/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
+
+  return new Promise (resolve, reject) ->
+
+    robot.http(requestUrl)
+      .header('Authorization', "Basic #{authPayload()}")
+      .get() (err, resp, body) ->
+        try
+          bodyObj = JSON.parse(body)
+          sprints = bodyObj.sprints || []
+          resolve sprints
+        catch error
+          reject error
+
+
+#
+# Robot listening registry
+#
 module.exports = (robot) ->
+
+  robot.respond /show jira sprints/i, (res) ->
+    fetchSprints(robot)
+      .then (sprints) ->
+        res.send "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
+
   robot.respond /check/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
 
-    # requestUrl = "#{jiraUrl}/rest/api/2/issue/EO-104"
+
+    # Find the currently open Sprint
+
 
     data =
       jql: "project in (#{projectId}) AND status = \"In Progress\" AND Sprint in (80)"
@@ -75,7 +132,7 @@ module.exports = (robot) ->
     requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{data.jql}&fields=#{data.fields}"
 
     robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload}")
+      .header('Authorization', "Basic #{authPayload()}")
       .get() (err, resp, body)->
         bodyObj = JSON.parse(body)
         howMany = bodyObj.total
