@@ -92,69 +92,67 @@ isConfiguredCorrectly = (res) ->
     return false
   return true
 
+getFromJira = (robot, path, callback) ->
+  robot.http("#{jiraUrl}#{path}")
+    .header('Authorization', "Basic #{authPayload()}")
+    .get() callback
+
 #
 # All fetch* methods return promises. They make calls to get specific data from the JIRA api.
 #
 fetchSprints = (robot) ->
   sprintsJql = "project = #{projectId} and Sprint not in closedSprints()"
-  requestUrl = "#{jiraUrl}/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
+  requestUrl = "/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
 
   return new Promise (resolve, reject) ->
-    robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload()}")
-      .get() (err, resp, body) ->
-        try
-          bodyObj = JSON.parse(body)
-          sprints = bodyObj.sprints || []
-          resolve sprints
-        catch error
-          reject error
+    getFromJira robot, requestUrl, (err, resp, body) ->
+      try
+        bodyObj = JSON.parse(body)
+        sprints = bodyObj.sprints || []
+        resolve sprints
+      catch error
+        reject error
 
 fetchUser = (robot, user) ->
-  requestUrl = "#{jiraUrl}/rest/api/2/user?key=#{user.key}&expand=groups"
+  requestUrl = "/rest/api/2/user?key=#{user.key}&expand=groups"
 
   return new Promise (resolve, reject) ->
-    robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload()}")
-      .get() (err, resp, body) ->
-        try
-          user = JSON.parse(body)
-          resolve user
-        catch error
-          reject error
+    getFromJira robot, requestUrl, (err, resp, body) ->
+      try
+        user = JSON.parse(body)
+        resolve user
+      catch error
+        reject error
 
 fetchUsers = (robot) ->
   # The correct way to get users by a group is with the /group?groupname=developers API.
   # Unfortunately, that requires the caller to have admin priviledges. This makes tons of
   # calls to the /user api to filter down to the userGroup, if it exists.
-  requestUrl = "#{jiraUrl}/rest/api/2/user/assignable/search?project=#{projectId}"
+  requestUrl = "/rest/api/2/user/assignable/search?project=#{projectId}"
 
   return new Promise (resolve, reject) ->
-    robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload()}")
-      .get() (err, resp, body) ->
-        try
-          users = JSON.parse(body)
+    getFromJira robot, requestUrl, (err, resp, body) ->
+      try
+        users = JSON.parse(body)
 
-          if userGroup?
-            # Filter by userGroup if it exists
-            userPromises = users.map (user) ->
-              return fetchUser(robot, user)
-            Promise.all(userPromises)
-              .then (users) ->
-                filteredUsers = users.filter (user) ->
-                  groups = user.groups.items || []
-                  groups.find (group) ->
-                    group.name == userGroup
+        if userGroup?
+          # Filter by userGroup if it exists
+          userPromises = users.map (user) ->
+            return fetchUser(robot, user)
+          Promise.all(userPromises)
+            .then (users) ->
+              filteredUsers = users.filter (user) ->
+                groups = user.groups.items || []
+                groups.find (group) ->
+                  group.name == userGroup
 
-                resolve filteredUsers
-              .catch (error) ->
-                reject error
-
-          else
-            resolve users
-        catch error
-          reject error
+              resolve filteredUsers
+            .catch (error) ->
+              reject error
+        else
+          resolve users
+      catch error
+        reject error
 
 fetchInProgressSubtasks = (robot) ->
 
@@ -162,12 +160,10 @@ fetchInProgressSubtasks = (robot) ->
     .then (sprints) ->
       sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
       jql = "project in (#{projectId}) AND issuetype = Sub-task AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
-      requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{jql}"
+      requestUrl = "/rest/api/2/search?jql=#{jql}"
 
       new Promise (resolve, reject) ->
-        robot.http(requestUrl)
-          .header('Authorization', "Basic #{authPayload()}")
-          .get() (err, resp, body) ->
+        getFromJira robot, requestUrl, (err, resp, body) ->
             try
               bodyObj = JSON.parse(body)
               issues = bodyObj.issues || []
@@ -193,7 +189,7 @@ generateInProgressReport = (inProgressIssues) ->
         # We have 2 actual users. Let's compare keys.
         if leftAssignee.key < rightAssignee.key
           return -1
-        else if leftAssignee > rightAssignee
+        else if leftAssignee.key > rightAssignee.key
           return 1
         return 0
       else
@@ -228,7 +224,7 @@ generateInProgressReport = (inProgressIssues) ->
       timeRemaining = "*#{timeRemaining}*"
 
     # Main line rendering
-    renderedIssue = "\t#{assigneeString} - #{timeRemaining} - #{issue.key}"
+    renderedIssue = "\t#{assigneeString}, #{timeRemaining} - #{issue.fields.summary} (#{issue.key})"
 
     # Show any warnings with the issue link
     if shouldBeResolved
@@ -279,13 +275,11 @@ module.exports = (robot) ->
     data =
       jql: "project in (#{projectId}) AND status = \"In Progress\" AND Sprint in (80)"
       fields: 'key'
-    requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{data.jql}&fields=#{data.fields}"
+    requestUrl = "/rest/api/2/search?jql=#{data.jql}&fields=#{data.fields}"
 
-    robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload()}")
-      .get() (err, resp, body)->
-        bodyObj = JSON.parse(body)
-        howMany = bodyObj.total
-        res.send "Found #{howMany} issues: #{bodyObj.issues.length}"
+    getFromJira robot, requestUrl, (err, resp, body)->
+      bodyObj = JSON.parse(body)
+      howMany = bodyObj.total
+      res.send "Found #{howMany} issues: #{bodyObj.issues.length}"
 
-        res.send bodyObj.issues.map( (issue) -> issue.key ).join(', ')
+      res.send bodyObj.issues.map( (issue) -> issue.key ).join(', ')
