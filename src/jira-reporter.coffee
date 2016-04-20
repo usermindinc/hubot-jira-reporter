@@ -205,6 +205,13 @@ fetchFreeAgents = (robot) ->
                 return false
           return freeAgents
 
+fetchAllReports = (robot) ->
+  allFetchMethods = [
+    fetchRecentlyClosedStories,
+    fetchInProgressSubtasks,
+    fetchFreeAgents,
+  ]
+  Promise.all(allFetchMethods.map((method) -> method(robot)))
 #
 # generate*Report methods all return a string with a specific report type
 #
@@ -277,10 +284,19 @@ generateFreeAgentsReport = (users) ->
   return "Free agents: #{users.map((user) -> user.name).join(', ')}"
 
 generateClosedStoriesReport = (stories) ->
+  console.log "stories: #{stories}"
   renderedStories = stories.map (issue) ->
     return "\t#{issue.key} #{issue.fields.summary}"
   return "Recently closed stories: \n#{renderedStories.join('\n')}"
 
+generateAllReports = (fetchResults) ->
+  generationFunctions = [
+    generateClosedStoriesReport,
+    generateInProgressReport,
+    generateFreeAgentsReport,
+  ]
+  fetchResults.map (results, index) ->
+    generationFunctions[index](results)
 
 
 #
@@ -333,4 +349,13 @@ module.exports = (robot) ->
         res.send report
 
   robot.respond /show jira report/i, (res) ->
-    res.send "Not yet."
+    if !isConfiguredCorrectly(res)
+      return
+
+    fetchAndGenerate(robot, fetchAllReports, generateAllReports)
+      .then (reports) ->
+        console.log reports
+        reports.map (report) ->
+          res.send report
+      .catch (whoops) ->
+        res.send "nooooppe #{whoops.message}"
