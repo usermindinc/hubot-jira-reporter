@@ -97,6 +97,12 @@ getFromJira = (robot, path, callback) ->
     .header('Authorization', "Basic #{authPayload()}")
     .get() callback
 
+fetchAndGenerate = (robot, fetchMethod, generateMethod) ->
+  fetchMethod(robot)
+    .then (results) ->
+      generateMethod(results)
+    .catch (error) ->
+      "Whoops. #{error.message}"
 #
 # All fetch* methods return promises. They make calls to get specific data from the JIRA api.
 #
@@ -186,6 +192,19 @@ fetchRecentlyClosedStories = (robot) ->
           catch error
             reject error
 
+fetchFreeAgents = (robot) ->
+  fetchUsers(robot)
+    .then (users) ->
+      fetchInProgressSubtasks(robot)
+        .then (subtasks) ->
+          freeAgents = users.filter (user) ->
+            !subtasks.find (issue) ->
+              if issue.fields.assignee?
+                return issue.fields.assignee.key == user.key
+              else
+                return false
+          return freeAgents
+
 #
 # generate*Report methods all return a string with a specific report type
 #
@@ -262,6 +281,8 @@ generateClosedStoriesReport = (stories) ->
     return "\t#{issue.key} #{issue.fields.summary}"
   return "Recently closed stories: \n#{renderedStories.join('\n')}"
 
+
+
 #
 # Robot listening registry
 #
@@ -270,49 +291,46 @@ module.exports = (robot) ->
   robot.respond /show jira sprints/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-    fetchSprints(robot)
-      .then (sprints) ->
-        res.send "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
-      .catch (error) ->
-        res.send "Whoops. #{error.message}"
+
+    renderSprints = (sprints) ->
+      "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
+    fetchAndGenerate(robot, fetchSprints, renderSprints)
+      .then (report) ->
+        res.send report
 
   robot.respond /show jira users/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-    fetchUsers(robot)
-      .then (users) ->
-        res.send "Users: #{users.map((user) -> user.name).join(', ')}"
-      .catch (error) ->
-        res.send "Whoops. #{error.message}"
+
+    renderUsers = (users) ->
+      "Users: #{users.map((user) -> user.name).join(', ')}"
+    fetchAndGenerate(robot, fetchUsers, renderUsers)
+      .then (report) ->
+        res.send report
 
   robot.respond /show jira in progress/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-    fetchInProgressSubtasks(robot)
-      .then (subtasks) ->
-        report = generateInProgressReport(subtasks)
+
+    fetchAndGenerate(robot, fetchInProgressSubtasks, generateInProgressReport)
+      .then (report) ->
         res.send report
-      .catch (error) ->
-        res.send "Whoops. #{error.message}"
 
   robot.respond /show jira free agents/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-    fetchUsers(robot)
-      .then (users) ->
-        fetchInProgressSubtasks(robot)
-          .then (subtasks) ->
-            freeAgents = users.filter (user) ->
-              !subtasks.find (issue) ->
-                if issue.fields.assignee?
-                  return issue.fields.assignee.key == user.key
-                else
-                  return false
-            res.send generateFreeAgentsReport(freeAgents)
+
+    fetchAndGenerate(robot, fetchFreeAgents, generateFreeAgentsReport)
+      .then (report) ->
+        res.send report
 
   robot.respond /show jira closed stories/i, (res) ->
     if !isConfiguredCorrectly(res)
       return
-    fetchRecentlyClosedStories(robot)
-      .then (stories) ->
-        res.send generateClosedStoriesReport(stories)
+
+    fetchAndGenerate(robot, fetchRecentlyClosedStories, generateClosedStoriesReport)
+      .then (report) ->
+        res.send report
+
+  robot.respond /show jira report/i, (res) ->
+    res.send "Not yet."
