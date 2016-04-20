@@ -92,6 +92,9 @@ isConfiguredCorrectly = (res) ->
     return false
   return true
 
+#
+# All fetch* methods return promises. They make calls to get specific data from the JIRA api.
+#
 fetchSprints = (robot) ->
   sprintsJql = "project = #{projectId} and Sprint not in closedSprints()"
   requestUrl = "#{jiraUrl}/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
@@ -153,6 +156,39 @@ fetchUsers = (robot) ->
         catch error
           reject error
 
+fetchInProgressSubtasks = (robot) ->
+  jql = "project in (#{projectId}) AND issuetype = Sub-task AND status = \"In Progress\" AND Sprint in (80)"
+  requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{jql}"
+
+  return new Promise (resolve, reject) ->
+    robot.http(requestUrl)
+      .header('Authorization', "Basic #{authPayload()}")
+      .get() (err, resp, body) ->
+        try
+          bodyObj = JSON.parse(body)
+          issues = bodyObj.issues || []
+          resolve issues
+        catch error
+          reject error
+
+#
+# generate*Report methods all return a string with a specific report type
+#
+generateInProgressReport = (inProgressIssues) ->
+  sortedIssues = inProgressIssues.sort (leftIssue, rightIssue) ->
+    leftAssignee = leftIssue.fields.assignee.key
+    rightAssignee = rightIssue.fields.assignee.key
+    if leftAssignee < rightAssignee
+      return -1
+    else if leftAssignee > rightAssignee
+      return 1
+    return 0
+  renderedList = sortedIssues.map (issue) ->
+    secondsLeft = issue.fields.progress.total - issue.fields.progress.progress
+    renderedIssue = "\t#{issue.fields.assignee.name} - #{secondsLeft}s remaining - #{issue.key}"
+    return renderedIssue
+
+  return "In progress tasks:\n#{renderedList.join('\n')}"
 #
 # Robot listening registry
 #
@@ -171,6 +207,21 @@ module.exports = (robot) ->
         res.send "Users: #{users.map((user) -> user.name).join(', ')}"
       .catch (error) ->
         res.send "Whoops. #{error.message}"
+
+  robot.respond /show jira in progress/i, (res) ->
+    fetchInProgressSubtasks(robot)
+      .then (subtasks) ->
+        # console.log "subtasks are #{subtasks.length}"
+        report = generateInProgressReport(subtasks)
+        # console.log report
+        res.send report
+      .catch (error) ->
+        res.send "Whoops. #{error.message}"
+    # In Progress tasks:
+    #   * @assigned - 3h remaining on ID - Title
+    #   * @assigned - 16h remaining on ID - Title
+    #      \-> Not updated since yesterday. http://link
+    #   * *unassigned* - 30h remaining -
 
   robot.respond /check/i, (res) ->
     if !isConfiguredCorrectly(res)
