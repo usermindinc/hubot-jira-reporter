@@ -157,20 +157,23 @@ fetchUsers = (robot) ->
           reject error
 
 fetchInProgressSubtasks = (robot) ->
-  jql = "project in (#{projectId}) AND issuetype = Sub-task AND status = \"In Progress\" AND Sprint in (80)"
-  requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{jql}"
 
-  return new Promise (resolve, reject) ->
-    robot.http(requestUrl)
-      .header('Authorization', "Basic #{authPayload()}")
-      .get() (err, resp, body) ->
-        try
-          bodyObj = JSON.parse(body)
-          issues = bodyObj.issues || []
-          resolve issues
-        catch error
-          reject error
+  return fetchSprints(robot)
+    .then (sprints) ->
+      sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
+      jql = "project in (#{projectId}) AND issuetype = Sub-task AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
+      requestUrl = "#{jiraUrl}/rest/api/2/search?jql=#{jql}"
 
+      new Promise (resolve, reject) ->
+        robot.http(requestUrl)
+          .header('Authorization', "Basic #{authPayload()}")
+          .get() (err, resp, body) ->
+            try
+              bodyObj = JSON.parse(body)
+              issues = bodyObj.issues || []
+              resolve issues
+            catch error
+              reject error
 #
 # generate*Report methods all return a string with a specific report type
 #
