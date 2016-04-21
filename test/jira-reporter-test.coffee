@@ -29,15 +29,9 @@ describe 'jira-reporter', ->
     room.destroy()
 
   context 'missing environment variables: ', ->
-    # afterEach ->
-    #   process.env.HUBOT_JIRA_URL = undefined
-    #   process.env.HUBOT_JIRA_USERNAME = undefined
-    #   process.env.HUBOT_JIRA_PASSWORD = undefined
-    #   process.env.HUBOT_JIRA_PROJECT_ID = undefined
-    #   process.env.HUBOT_JIRA_REPORT_USER_GROUP = undefined
-
     afterEach ->
       process.env = {}
+
     context 'All', ->
       beforeEach ->
         room.user.say 'alice', 'hubot show jira free agents'
@@ -58,8 +52,6 @@ describe 'jira-reporter', ->
         process.env =
           HUBOT_JIRA_URL: environment.jiraUrl
         room.user.say 'alice', 'hubot show jira free agents'
-      afterEach ->
-        process.env = {}
 
       it 'will complain about everything except HUBOT_JIRA_URL', ->
         expect(room.messages).to.eql [
@@ -78,8 +70,6 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_PASSWORD: environment.password
           HUBOT_JIRA_PROJECT_ID: environment.projectId
         room.user.say 'alice', 'hubot show jira free agents'
-      afterEach ->
-        process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_URL', ->
         expect(room.messages).to.eql [
@@ -94,8 +84,6 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_PASSWORD: environment.password
           HUBOT_JIRA_PROJECT_ID: environment.projectId
         room.user.say 'alice', 'hubot show jira free agents'
-      afterEach ->
-        process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_USERNAME', ->
         expect(room.messages).to.eql [
@@ -110,8 +98,6 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_USERNAME: environment.user
           HUBOT_JIRA_PROJECT_ID: environment.projectId
         room.user.say 'alice', 'hubot show jira free agents'
-      afterEach ->
-        process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_PASSWORD', ->
         expect(room.messages).to.eql [
@@ -126,8 +112,6 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_USERNAME: environment.user
           HUBOT_JIRA_PASSWORD: environment.password
         room.user.say 'alice', 'hubot show jira free agents'
-      afterEach ->
-        process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_PROJECT_ID', ->
         expect(room.messages).to.eql [
@@ -137,13 +121,12 @@ describe 'jira-reporter', ->
 
   context 'with only required environment variables', ->
     beforeEach ->
-      process.env.HUBOT_JIRA_URL = environment.jiraUrl
-      process.env.HUBOT_JIRA_USERNAME = environment.user
-      process.env.HUBOT_JIRA_PASSWORD = environment.password
-      process.env.HUBOT_JIRA_PROJECT_ID = environment.projectId
+      process.env =
+        HUBOT_JIRA_URL: environment.jiraUrl
+        HUBOT_JIRA_USERNAME: environment.user
+        HUBOT_JIRA_PASSWORD: environment.password
+        HUBOT_JIRA_PROJECT_ID: environment.projectId
       room.user.say 'alice', 'hubot hi'
-    afterEach ->
-      process.env = {}
 
     it 'will respond with a greeting', ->
       expect(room.messages).to.eql [
@@ -153,11 +136,12 @@ describe 'jira-reporter', ->
 
   context 'with environment variables set including group', ->
     beforeEach ->
-      process.env.HUBOT_JIRA_URL = environment.jiraUrl
-      process.env.HUBOT_JIRA_USERNAME = environment.user
-      process.env.HUBOT_JIRA_PASSWORD = environment.password
-      process.env.HUBOT_JIRA_PROJECT_ID = environment.projectId
-      process.env.HUBOT_JIRA_REPORT_USER_GROUP = environment.userGroup
+      process.env =
+        HUBOT_JIRA_URL: environment.jiraUrl
+        HUBOT_JIRA_USERNAME: environment.user
+        HUBOT_JIRA_PASSWORD: environment.password
+        HUBOT_JIRA_PROJECT_ID: environment.projectId
+        HUBOT_JIRA_REPORT_USER_GROUP: environment.userGroup
       room.user.say 'alice', 'hubot hi'
 
     it 'will respond with a greeting', ->
