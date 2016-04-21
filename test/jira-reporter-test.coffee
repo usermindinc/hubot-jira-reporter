@@ -13,6 +13,9 @@ environment =
   projectId: 'ABC'
   userGroup: 'brown-coats'
 
+jiraApiPaths =
+  sprints: "/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=project%20%3D%20ABC%20and%20Sprint%20not%20in%20closedSprints()"
+
 describe 'jira-reporter', ->
   room = null
 
@@ -21,8 +24,16 @@ describe 'jira-reporter', ->
     room = helper.createRoom()
     do nock.disableNetConnect
     nock(environment.jiraUrl)
-      .get("/rest/greenhopper/1.0/integration/teamcalendars/sprint/list")
-      .reply 200, { "nope": "nope" }
+      .get(jiraApiPaths.sprints)
+      .reply(
+        200,
+        JSON.stringify {
+          sprints: [
+            {id: '13'},
+            {id: '14'},
+          ]
+        }
+      )
 
   afterEach ->
     # Tear it down after the test to free up the listener.
@@ -127,12 +138,12 @@ describe 'jira-reporter', ->
         HUBOT_JIRA_USERNAME: environment.user
         HUBOT_JIRA_PASSWORD: environment.password
         HUBOT_JIRA_PROJECT_ID: environment.projectId
-      room.user.say 'alice', 'hubot hi'
+      room.user.say 'alice', 'hubot show jira sprints'
 
     it 'will respond with a greeting', ->
       expect(room.messages).to.eql [
-        ['alice', 'hubot hi'],
-        ['hubot', 'hi']
+        ['alice', 'hubot show jira sprints'],
+        ['hubot', 'Sprints: 13, 14']
       ]
 
   context 'with environment variables set including group', ->
