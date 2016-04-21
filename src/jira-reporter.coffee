@@ -215,6 +215,12 @@ fetchAllReports = (robot) ->
 #
 # generate*Report methods all return a string with a specific report type
 #
+generateSprintsReport = (sprints) ->
+  "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
+
+generateUsersReport = (users) ->
+  "Users: #{users.map((user) -> user.name).join(', ')}"
+
 generateInProgressReport = (inProgressIssues) ->
   # Example output:
   #
@@ -299,93 +305,57 @@ generateAllReports = (fetchResults) ->
 
 
 #
-# respondWith* functions are the real handlers to all requests
+# respondWith is the boilerplate for our pattern of:
+#   * Check environment variables
+#   * fetch the data required for the report
+#   * generate the report
+#   * post the report
 #
-respondWithSprints = (robot, res) ->
+respondWith = (robot, res, fetchMethod, generateMethod) ->
   if !isConfiguredCorrectly(res)
     return
 
-  renderSprints = (sprints) ->
-    "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
-  fetchAndGenerate(robot, fetchSprints, renderSprints)
+  fetchAndGenerate(robot, fetchMethod, generateMethod)
     .then (report) ->
-      res.send report
-
-respondWithUsers = (robot, res) ->
-  if !isConfiguredCorrectly(res)
-    return
-
-  renderUsers = (users) ->
-    "Users: #{users.map((user) -> user.name).join(', ')}"
-  fetchAndGenerate(robot, fetchUsers, renderUsers)
-    .then (report) ->
-      res.send report
-
-respondWithInProgress = (robot, res) ->
-  if !isConfiguredCorrectly(res)
-    return
-
-  fetchAndGenerate(robot, fetchInProgressSubtasks, generateInProgressReport)
-    .then (report) ->
-      res.send report
-
-respondWithFreeAgents = (robot, res) ->
-  if !isConfiguredCorrectly(res)
-    return
-
-  fetchAndGenerate(robot, fetchFreeAgents, generateFreeAgentsReport)
-    .then (report) ->
-      res.send report
-
-respondWithClosedStories = (robot, res) ->
-  if !isConfiguredCorrectly(res)
-    return
-
-  fetchAndGenerate(robot, fetchRecentlyClosedStories, generateClosedStoriesReport)
-    .then (report) ->
-      res.send report
-
-respondWithFullReport = (robot, res) ->
-  if !isConfiguredCorrectly(res)
-    return
-
-  fetchAndGenerate(robot, fetchAllReports, generateAllReports)
-    .then (reports) ->
-      reports.forEach (report) ->
+      if Array.isArray(report)
+        report.forEach (item) ->
+          res.send item
+      else
         res.send report
+
 #
 # Robot listening registry
 #
 module.exports = (robot) ->
   robot.on "jira:sprints", (res) ->
-    respondWithSprints robot, res
+    respondWith robot, res, fetchSprints, generateSprintsReport
   robot.respond /show jira sprints/i, (res) ->
-    respondWithSprints robot, res
+    respondWith robot, res, fetchSprints, generateSprintsReport
 
   robot.on "jira:users", (res) ->
-    respondWithUsers robot, res
+    respondWith robot, res fetchUsers, generateUsersReport
   robot.respond /show jira users/i, (res) ->
-    respondWithUsers robot, res
+    respondWith robot, res fetchUsers, generateUsersReport
 
   robot.on "jira:in-progress", (res) ->
-    respondWithInProgress robot, res
+    respondWith robot, res, fetchInProgressSubtasks, generateInProgressReport
   robot.respond /show jira in progress/i, (res) ->
-    respondWithInProgress robot, res
+    respondWith robot, res, fetchInProgressSubtasks, generateInProgressReport
 
   robot.on "jira:free-agents", (res) ->
-    respondWithFreeAgents robot, res
+    respondWith robot, res, fetchFreeAgents, generateFreeAgentsReport
   robot.respond /show jira free agents/i, (res) ->
-    respondWithFreeAgents robot, res
+    respondWith robot, res, fetchFreeAgents, generateFreeAgentsReport
 
   robot.on "jira:closed", (res) ->
-    respondWithClosedStories robot, res
+    respondWith robot, res, fetchRecentlyClosedStories, generateClosedStoriesReport
   robot.respond /show jira closed stories/i, (res) ->
-    respondWithClosedStories robot, res
+    respondWith robot, res, fetchRecentlyClosedStories, generateClosedStoriesReport
 
   robot.on "jira:report", (res) ->
-    respondWithFullReport robot, res
+    respondWith robot, res, fetchAllReports, generateAllReports
   robot.respond /show jira report/i, (res) ->
-    respondWithFullReport robot, res
+    respondWith robot, res, fetchAllReports, generateAllReports
 
   robot.respond /emit (.*)/i, (res) ->
     event = res.match[1]
