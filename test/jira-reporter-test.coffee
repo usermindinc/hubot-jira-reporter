@@ -20,13 +20,14 @@ describe 'jira-reporter', ->
     # Set up the room before running the test
     room = helper.createRoom()
     do nock.disableNetConnect
-    nock("https://usermind.atlassian.net")
-      .get("/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=")
+    nock(environment.jiraUrl)
+      .get("/rest/greenhopper/1.0/integration/teamcalendars/sprint/list")
       .reply 200, { "nope": "nope" }
 
   afterEach ->
     # Tear it down after the test to free up the listener.
     room.destroy()
+    nock.cleanAll()
 
   context 'missing environment variables: ', ->
     afterEach ->
@@ -149,24 +150,3 @@ describe 'jira-reporter', ->
         ['alice', 'hubot hi'],
         ['hubot', 'hi']
       ]
-
-  # context 'user says hi to hubot', ->
-  #   beforeEach ->
-  #     room.user.say 'alice', 'hubot hi'
-  #
-  #   it 'should reply hi to user', ->
-  #     expect(room.messages).to.eql [
-  #       ['alice', 'hubot hi']
-  #       ['hubot', 'hi']
-  #     ]
-
-  #
-  # context 'user says "show jira sprints" to hubot' ->
-  #   beforeEach ->
-  #     room.user.say 'alice', 'hubot show jira sprints'
-  #
-  #   it 'should reply with sprint ids', ->
-  #     expect(room.messages).to.eql [
-  #       ['alice', 'hubot show jira sprints']
-  #       ['hubot', 'no']
-  #     ]
