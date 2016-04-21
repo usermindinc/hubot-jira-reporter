@@ -40,11 +40,11 @@ describe 'jira-reporter', ->
       process.env = {}
     context 'All', ->
       beforeEach ->
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
 
       it 'will complain about everything', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot',
             'Missing HUBOT_JIRA_URL environment variable\n' +
             'Missing HUBOT_JIRA_USERNAME environment variable\n' +
@@ -57,13 +57,13 @@ describe 'jira-reporter', ->
       beforeEach ->
         process.env =
           HUBOT_JIRA_URL: environment.jiraUrl
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
       afterEach ->
         process.env = {}
 
       it 'will complain about everything except HUBOT_JIRA_URL', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot',
             'Missing HUBOT_JIRA_USERNAME environment variable\n' +
             'Missing HUBOT_JIRA_PASSWORD environment variable\n' +
@@ -77,13 +77,13 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_USERNAME: environment.user
           HUBOT_JIRA_PASSWORD: environment.password
           HUBOT_JIRA_PROJECT_ID: environment.projectId
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
       afterEach ->
         process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_URL', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot', 'Missing HUBOT_JIRA_URL environment variable']
         ]
 
@@ -93,13 +93,13 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_URL: environment.jiraUrl
           HUBOT_JIRA_PASSWORD: environment.password
           HUBOT_JIRA_PROJECT_ID: environment.projectId
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
       afterEach ->
         process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_USERNAME', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot', 'Missing HUBOT_JIRA_USERNAME environment variable']
         ]
 
@@ -109,13 +109,13 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_URL: environment.jiraUrl
           HUBOT_JIRA_USERNAME: environment.user
           HUBOT_JIRA_PROJECT_ID: environment.projectId
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
       afterEach ->
         process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_PASSWORD', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot', 'Missing HUBOT_JIRA_PASSWORD environment variable']
         ]
 
@@ -125,13 +125,13 @@ describe 'jira-reporter', ->
           HUBOT_JIRA_URL: environment.jiraUrl
           HUBOT_JIRA_USERNAME: environment.user
           HUBOT_JIRA_PASSWORD: environment.password
-        room.user.say 'alice', 'hubot hi'
+        room.user.say 'alice', 'hubot show jira free agents'
       afterEach ->
         process.env = {}
 
       it 'will complain about missing HUBOT_JIRA_PROJECT_ID', ->
         expect(room.messages).to.eql [
-          ['alice', 'hubot hi'],
+          ['alice', 'hubot show jira free agents'],
           ['hubot', 'Missing HUBOT_JIRA_PROJECT_ID environment variable']
         ]
 
