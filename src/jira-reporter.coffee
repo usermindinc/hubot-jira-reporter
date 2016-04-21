@@ -357,6 +357,9 @@ module.exports = (robot) ->
   robot.respond /show jira report/i, (res) ->
     respondWith robot, res, fetchAllReports, generateAllReports
 
+  robot.respond /hi$/i, (msg) ->
+    msg.send 'hi'
+
   robot.respond /emit (.*)/i, (res) ->
     event = res.match[1]
     robot.emit event, res

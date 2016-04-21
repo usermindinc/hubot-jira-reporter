@@ -1,19 +1,26 @@
-chai = require 'chai'
-sinon = require 'sinon'
-chai.use require 'sinon-chai'
+Helper = require('hubot-test-helper')
+expect = require('chai').expect
 
-expect = chai.expect
+# helper loads a specific script if it's a file
+helper = new Helper('./../src/jira-reporter.coffee')
 
 describe 'jira-reporter', ->
+  room = null
+
   beforeEach ->
-    @robot =
-      respond: sinon.spy()
-      hear: sinon.spy()
+    # Set up the room before running the test
+    room = helper.createRoom()
 
-    require('../src/jira-reporter')(@robot)
+  afterEach ->
+    # Tear it down after the test to free up the listener.
+    room.destroy()
 
-  it 'registers a respond listener', ->
-    expect(@robot.respond).to.have.been.calledWith(/hello/)
+  context 'user says hi to hubot', ->
+    beforeEach ->
+      room.user.say 'alice', 'hubot hi'
 
-  it 'registers a hear listener', ->
-    expect(@robot.hear).to.have.been.calledWith(/orly/)
+    it 'should reply hi to user', ->
+      expect(room.messages).to.eql [
+        ['alice', 'hubot hi']
+        ['hubot', 'hi']
+      ]
