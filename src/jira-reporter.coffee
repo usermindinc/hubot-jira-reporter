@@ -299,19 +299,26 @@ generateAllReports = (fetchResults) ->
 
 
 #
+# respondWith* functions are the real handlers to all requests
+#
+respondWithSprints = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  renderSprints = (sprints) ->
+    "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
+  fetchAndGenerate(robot, fetchSprints, renderSprints)
+    .then (report) ->
+      res.send report
+#
 # Robot listening registry
 #
 module.exports = (robot) ->
-
+  robot.on "jira:sprints", (res) ->
+    res.send "saw jira:sprints"
+    respondWithSprints robot, res
   robot.respond /show jira sprints/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
-
-    renderSprints = (sprints) ->
-      "Sprints: #{sprints.map((sprint) -> sprint.id).join(', ')}"
-    fetchAndGenerate(robot, fetchSprints, renderSprints)
-      .then (report) ->
-        res.send report
+    respondWithSprints robot, res
 
   robot.respond /show jira users/i, (res) ->
     if !isConfiguredCorrectly(res)
@@ -355,3 +362,8 @@ module.exports = (robot) ->
       .then (reports) ->
         reports.forEach (report) ->
           res.send report
+
+  robot.respond /emit (.*)/i, (res) ->
+    event = res.match[1]
+    res.send "emiting #{event}"
+    robot.emit event, res
