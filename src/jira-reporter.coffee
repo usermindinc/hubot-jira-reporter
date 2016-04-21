@@ -310,60 +310,83 @@ respondWithSprints = (robot, res) ->
   fetchAndGenerate(robot, fetchSprints, renderSprints)
     .then (report) ->
       res.send report
+
+respondWithUsers = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  renderUsers = (users) ->
+    "Users: #{users.map((user) -> user.name).join(', ')}"
+  fetchAndGenerate(robot, fetchUsers, renderUsers)
+    .then (report) ->
+      res.send report
+
+respondWithInProgress = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  fetchAndGenerate(robot, fetchInProgressSubtasks, generateInProgressReport)
+    .then (report) ->
+      res.send report
+
+respondWithFreeAgents = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  fetchAndGenerate(robot, fetchFreeAgents, generateFreeAgentsReport)
+    .then (report) ->
+      res.send report
+
+respondWithClosedStories = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  fetchAndGenerate(robot, fetchRecentlyClosedStories, generateClosedStoriesReport)
+    .then (report) ->
+      res.send report
+
+respondWithFullReport = (robot, res) ->
+  if !isConfiguredCorrectly(res)
+    return
+
+  fetchAndGenerate(robot, fetchAllReports, generateAllReports)
+    .then (reports) ->
+      reports.forEach (report) ->
+        res.send report
 #
 # Robot listening registry
 #
 module.exports = (robot) ->
   robot.on "jira:sprints", (res) ->
-    res.send "saw jira:sprints"
     respondWithSprints robot, res
   robot.respond /show jira sprints/i, (res) ->
     respondWithSprints robot, res
 
+  robot.on "jira:users", (res) ->
+    respondWithUsers robot, res
   robot.respond /show jira users/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
+    respondWithUsers robot, res
 
-    renderUsers = (users) ->
-      "Users: #{users.map((user) -> user.name).join(', ')}"
-    fetchAndGenerate(robot, fetchUsers, renderUsers)
-      .then (report) ->
-        res.send report
-
+  robot.on "jira:in-progress", (res) ->
+    respondWithInProgress robot, res
   robot.respond /show jira in progress/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
+    respondWithInProgress robot, res
 
-    fetchAndGenerate(robot, fetchInProgressSubtasks, generateInProgressReport)
-      .then (report) ->
-        res.send report
-
+  robot.on "jira:free-agents", (res) ->
+    respondWithFreeAgents robot, res
   robot.respond /show jira free agents/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
+    respondWithFreeAgents robot, res
 
-    fetchAndGenerate(robot, fetchFreeAgents, generateFreeAgentsReport)
-      .then (report) ->
-        res.send report
-
+  robot.on "jira:closed", (res) ->
+    respondWithClosedStories robot, res
   robot.respond /show jira closed stories/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
+    respondWithClosedStories robot, res
 
-    fetchAndGenerate(robot, fetchRecentlyClosedStories, generateClosedStoriesReport)
-      .then (report) ->
-        res.send report
-
+  robot.on "jira:report", (res) ->
+    respondWithFullReport robot, res
   robot.respond /show jira report/i, (res) ->
-    if !isConfiguredCorrectly(res)
-      return
-
-    fetchAndGenerate(robot, fetchAllReports, generateAllReports)
-      .then (reports) ->
-        reports.forEach (report) ->
-          res.send report
+    respondWithFullReport robot, res
 
   robot.respond /emit (.*)/i, (res) ->
     event = res.match[1]
-    res.send "emiting #{event}"
     robot.emit event, res
