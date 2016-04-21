@@ -14,7 +14,11 @@ environment =
   userGroup: 'brown-coats'
 
 jiraApiPaths =
-  sprints: "/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=project%20%3D%20ABC%20and%20Sprint%20not%20in%20closedSprints()"
+  sprints: "/rest/greenhopper/1.0/integration/teamcalendars/sprint/list"
+
+jiraApiQuery =
+  sprints: (query) ->
+    query.jql?
 
 describe 'jira-reporter', ->
   room = null
@@ -124,6 +128,7 @@ describe 'jira-reporter', ->
     beforeEach ->
       nock(environment.jiraUrl)
         .get(jiraApiPaths.sprints)
+        .query(jiraApiQuery.sprints)
         .reply(
           200,
           JSON.stringify {
@@ -150,6 +155,7 @@ describe 'jira-reporter', ->
     beforeEach ->
       nock(environment.jiraUrl)
         .get(jiraApiPaths.sprints)
+        .query(jiraApiQuery.sprints)
         .reply(
           200,
           JSON.stringify {
