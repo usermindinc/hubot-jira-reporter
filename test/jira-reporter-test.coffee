@@ -23,17 +23,6 @@ describe 'jira-reporter', ->
     # Set up the room before running the test
     room = helper.createRoom()
     do nock.disableNetConnect
-    nock(environment.jiraUrl)
-      .get(jiraApiPaths.sprints)
-      .reply(
-        200,
-        JSON.stringify {
-          sprints: [
-            {id: '13'},
-            {id: '14'},
-          ]
-        }
-      )
 
   afterEach ->
     # Tear it down after the test to free up the listener.
@@ -133,6 +122,17 @@ describe 'jira-reporter', ->
 
   context 'with only required environment variables', ->
     beforeEach ->
+      nock(environment.jiraUrl)
+        .get(jiraApiPaths.sprints)
+        .reply(
+          200,
+          JSON.stringify {
+            sprints: [
+              {id: '13'},
+              {id: '14'},
+            ]
+          }
+        )
       process.env =
         HUBOT_JIRA_URL: environment.jiraUrl
         HUBOT_JIRA_USERNAME: environment.user
@@ -140,7 +140,7 @@ describe 'jira-reporter', ->
         HUBOT_JIRA_PROJECT_ID: environment.projectId
       room.user.say 'alice', 'hubot show jira sprints'
 
-    it 'will respond with a greeting', ->
+    it 'will respond to the `show jira sprints` command', ->
       expect(room.messages).to.eql [
         ['alice', 'hubot show jira sprints'],
         ['hubot', 'Sprints: 13, 14']
@@ -148,16 +148,27 @@ describe 'jira-reporter', ->
 
   context 'with environment variables set including group', ->
     beforeEach ->
+      nock(environment.jiraUrl)
+        .get(jiraApiPaths.sprints)
+        .reply(
+          200,
+          JSON.stringify {
+            sprints: [
+              {id: '13'},
+              {id: '14'},
+            ]
+          }
+        )
       process.env =
         HUBOT_JIRA_URL: environment.jiraUrl
         HUBOT_JIRA_USERNAME: environment.user
         HUBOT_JIRA_PASSWORD: environment.password
         HUBOT_JIRA_PROJECT_ID: environment.projectId
         HUBOT_JIRA_REPORT_USER_GROUP: environment.userGroup
-      room.user.say 'alice', 'hubot hi'
+      room.user.say 'alice', 'hubot show jira sprints'
 
-    it 'will respond with a greeting', ->
+    it 'will respond to the `show jira sprints` command', ->
       expect(room.messages).to.eql [
-        ['alice', 'hubot hi'],
-        ['hubot', 'hi']
+        ['alice', 'hubot show jira sprints'],
+        ['hubot', 'Sprints: 13, 14']
       ]
