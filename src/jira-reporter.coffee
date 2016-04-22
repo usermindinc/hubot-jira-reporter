@@ -2,25 +2,41 @@
 #   Compiles data from JIRA into daily reports
 #
 # Configuration:
-#   LIST_OF_ENV_VARS_TO_SET
+#   Required:
+#   HUBOT_JIRA_URL - url of your jira instance. Ex: https://example.atlassian.net
+#   HUBOT_JIRA_USERNAME - Username to authenticate to Jira with.
+#   HUBOT_JIRA_PASSWORD - Password to authenticate to jira with.
+#   HUBOT_JIRA_PROJECT_ID - Project key to scope queries to. Ex: AA
+#
+#   Optional:
+#   HUBOT_JIRA_REPORT_USER_GROUP - User group to scope queries to. Ex: "users"
 #
 # Commands:
-#   hubot hello - <what the respond trigger does>
-#   orly - <what the hear trigger does>
+#   hubot show jira closed stories - shows stories closes in the last 24 hours
+#   hubot show jira in progress - shows all subtasks in progress
+#   hubot show jira free agents - shows all users (or users in the USER_GROUP) that don't have
+#       subtasks assigned to them.
+#   hubot show jira report - Show all of the above in a full report
 #
 # Notes:
-#   <optional notes required for the script>
+#   These calls also respond to events. Event => jira command:
+#   jira:closed =>      hubot show jira closed stories
+#   jira:in-progress => hubot show jira in progress
+#   jira:free-agents => hubot show jira free agents
+#   jira:report =>      hubot show jira report
+#
+#   This was made to answer 4 questions in our JIRA instance:
+#     1. Does everyone have something in progress?
+#     2. Does all in-progress stuff have an owner?
+#     3. What *stories* have been closed in the last day?
+#     4. Have all in-progress issues had their time tracking updated?
 #
 # Author:
 #   Chris Downie <cdownie@gmail.com>
 
 
 btoa       = require 'btoa'
-# cronParser = require 'cron-parser'
 moment     = require 'moment'
-# schedule   = require 'node-schedule'
-# Promise    = require 'promise'
-# _          = require 'underscore'
 
 jiraUrl = ->
   process.env.HUBOT_JIRA_URL
@@ -36,45 +52,6 @@ authPayload = () ->
     return btoa "#{username}:#{password}"
   else
     return null
-
-
-
-# 4 questions
-# 1. Does everyone have something in progress?
-# 2. Does all in-progress stuff have an owner?
-# 3. What *stories* have been closed in the last day?
-# 4. Have all in-progress issues had their time tracking updated?
-
-# what sprints are active?
-# who's in jira?
-#
-# Interactions!!
-# show jira closed stories
-# Closed Stories:
-#   * ID - Title
-#   * ID - Title
-#
-# show jira in progress
-# In Progress tasks:
-#   * @assigned - 3h remaining on ID - Title
-#   * @assigned - 16h remaining on ID - Title
-#      \-> Not updated since yesterday. http://link
-#   * *unassigned* - 30h remaining -
-#
-# show jira free agents
-# Free agents: Sullins, Maclemnore, Lacoste
-#
-# show jira report
-# Closed Stories:
-#   * ID - Title
-#   * ID - Title
-# In Progress tasks:
-#   * @assigned - 3h remaining on ID - Title
-#   * @assigned - 16h remaining on ID - Title
-#      \-> Not updated since yesterday. http://link
-#   * *unassigned* - 30h remaining -
-# Free agents: Sullins, Maclemnore, Lacoste
-
 
 
 # Check if all the required environment variables have been set.
@@ -225,13 +202,6 @@ generateUsersReport = (users) ->
   "Users: #{users.map((user) -> user.name).join(', ')}"
 
 generateInProgressReport = (inProgressIssues) ->
-  # Example output:
-  #
-  # In Progress tasks:
-  #   * @assigned - 3h remaining on ID - Title
-  #   * @assigned - 16h remaining on ID - Title
-  #      \-> Not updated since yesterday. http://link
-  #   * *unassigned* - 30h remaining -
   sortedIssues = inProgressIssues.sort (leftIssue, rightIssue) ->
     leftAssignee = leftIssue.fields.assignee
     rightAssignee = rightIssue.fields.assignee
