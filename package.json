@@ -1,7 +1,7 @@
 {
   "name": "hubot-jira-reporter",
   "description": "Compiles data from JIRA into daily reports",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "author": "Chris Downie <cdownie@gmail.com>",
   "license": "MIT",
   "keywords": "hubot, hubot-scripts, hira",
