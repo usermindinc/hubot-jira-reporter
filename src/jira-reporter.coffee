@@ -38,9 +38,12 @@
 btoa       = require 'btoa'
 moment     = require 'moment'
 
-jiraUrl = process.env.HUBOT_JIRA_URL
-projectId = process.env.HUBOT_JIRA_PROJECT_ID
-userGroup = process.env.HUBOT_JIRA_REPORT_USER_GROUP
+jiraUrl = ->
+  process.env.HUBOT_JIRA_URL
+projectId = ->
+  process.env.HUBOT_JIRA_PROJECT_ID
+userGroup = ->
+  process.env.HUBOT_JIRA_REPORT_USER_GROUP
 authPayload = () ->
   username = process.env.HUBOT_JIRA_USERNAME
   password = process.env.HUBOT_JIRA_PASSWORD
@@ -55,7 +58,7 @@ authPayload = () ->
 isConfiguredCorrectly = (res) ->
   errors = []
 
-  if !jiraUrl?
+  if !jiraUrl()?
     errors.push "Missing HUBOT_JIRA_URL environment variable"
   if !process.env.HUBOT_JIRA_USERNAME?
     errors.push "Missing HUBOT_JIRA_USERNAME environment variable"
@@ -70,7 +73,7 @@ isConfiguredCorrectly = (res) ->
   return true
 
 getFromJira = (robot, path, callback) ->
-  robot.http("#{jiraUrl}#{path}")
+  robot.http("#{jiraUrl()}#{path}")
     .header('Authorization', "Basic #{authPayload()}")
     .get() callback
 
@@ -84,7 +87,7 @@ fetchAndGenerate = (robot, fetchMethod, generateMethod) ->
 # All fetch* methods return promises. They make calls to get specific data from the JIRA api.
 #
 fetchSprints = (robot) ->
-  sprintsJql = "project = #{projectId} and Sprint not in closedSprints()"
+  sprintsJql = "project = #{projectId()} and Sprint not in closedSprints()"
   requestUrl = "/rest/greenhopper/1.0/integration/teamcalendars/sprint/list?jql=#{sprintsJql}"
 
   return new Promise (resolve, reject) ->
@@ -111,14 +114,14 @@ fetchUsers = (robot) ->
   # The correct way to get users by a group is with the /group?groupname=developers API.
   # Unfortunately, that requires the caller to have admin priviledges. This makes tons of
   # calls to the /user api to filter down to the userGroup, if it exists.
-  requestUrl = "/rest/api/2/user/assignable/search?project=#{projectId}"
+  requestUrl = "/rest/api/2/user/assignable/search?project=#{projectId()}"
 
   return new Promise (resolve, reject) ->
     getFromJira robot, requestUrl, (err, resp, body) ->
       try
         users = JSON.parse(body)
 
-        if userGroup?
+        if userGroup()?
           # Filter by userGroup if it exists
           userPromises = users.map (user) ->
             return fetchUser(robot, user)
@@ -127,7 +130,7 @@ fetchUsers = (robot) ->
               filteredUsers = users.filter (user) ->
                 groups = user.groups.items || []
                 groups.find (group) ->
-                  group.name == userGroup
+                  group.name == userGroup()
 
               resolve filteredUsers
             .catch (error) ->
@@ -141,7 +144,7 @@ fetchInProgressSubtasks = (robot) ->
   fetchSprints(robot)
     .then (sprints) ->
       sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
-      jql = "project in (#{projectId}) AND issuetype in subTaskIssueTypes() AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
+      jql = "project in (#{projectId()}) AND issuetype in subTaskIssueTypes() AND status = \"In Progress\" AND Sprint in (#{sprintIds})"
       requestUrl = "/rest/api/2/search?jql=#{jql}"
 
       new Promise (resolve, reject) ->
@@ -157,7 +160,7 @@ fetchRecentlyClosedStories = (robot) ->
   fetchSprints(robot)
     .then (sprints) ->
       sprintIds = sprints.map( (sprint) -> sprint.id ).join(',')
-      jql = "project in (#{projectId}) AND issuetype in standardIssueTypes() AND status in (Resolved, Closed) AND Sprint in (#{sprintIds}) AND updated >= -24h"
+      jql = "project in (#{projectId()}) AND issuetype in standardIssueTypes() AND status in (Resolved, Closed) AND Sprint in (#{sprintIds}) AND updated >= -24h"
       requestUrl = "/rest/api/2/search?jql=#{jql}"
 
       new Promise (resolve, reject) ->
@@ -220,7 +223,7 @@ generateInProgressReport = (inProgressIssues) ->
 
   renderedList = sortedIssues.map (issue) ->
     # Useful computed data
-    issueLink = "#{jiraUrl}/browse/#{issue.key}"
+    issueLink = "#{jiraUrl()}/browse/#{issue.key}"
     secondsLeft = issue.fields.progress.total - issue.fields.progress.progress
     updatedAgo = moment.duration(moment().diff(moment(issue.fields.updated)))
 
