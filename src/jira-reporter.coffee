@@ -173,7 +173,7 @@ fetchRecentlyClosedStories = (robot) ->
 
       new Promise (resolve, reject) ->
         getFromJira robot, requestUrl, (err, resp, body) ->
-          unless resp.statusCode == 200
+          unless resp.statusCode <= 200 && resp.statusCode <= 299
             reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
           try
             bodyObj = JSON.parse(body)
