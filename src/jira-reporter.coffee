@@ -92,6 +92,8 @@ fetchSprints = (robot) ->
 
   return new Promise (resolve, reject) ->
     getFromJira robot, requestUrl, (err, resp, body) ->
+      unless resp.statusCode <= 200 && resp.statusCode <= 299
+        reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
       try
         bodyObj = JSON.parse(body)
         sprints = bodyObj.sprints || []
@@ -104,6 +106,8 @@ fetchUser = (robot, user) ->
 
   return new Promise (resolve, reject) ->
     getFromJira robot, requestUrl, (err, resp, body) ->
+      unless resp.statusCode <= 200 && resp.statusCode <= 299
+        reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
       try
         user = JSON.parse(body)
         resolve user
@@ -118,6 +122,8 @@ fetchUsers = (robot) ->
 
   return new Promise (resolve, reject) ->
     getFromJira robot, requestUrl, (err, resp, body) ->
+      unless resp.statusCode <= 200 && resp.statusCode <= 299
+        reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
       try
         users = JSON.parse(body)
 
@@ -149,6 +155,8 @@ fetchInProgressSubtasks = (robot) ->
 
       new Promise (resolve, reject) ->
         getFromJira robot, requestUrl, (err, resp, body) ->
+          unless resp.statusCode <= 200 && resp.statusCode <= 299
+            reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
           try
             bodyObj = JSON.parse(body)
             issues = bodyObj.issues || []
@@ -165,6 +173,8 @@ fetchRecentlyClosedStories = (robot) ->
 
       new Promise (resolve, reject) ->
         getFromJira robot, requestUrl, (err, resp, body) ->
+          unless resp.statusCode <= 200 && resp.statusCode <= 299
+            reject new Error("Fetch failure. #{resp.statusCode}:#{resp.statusMessage}")
           try
             bodyObj = JSON.parse(body)
             issues = bodyObj.issues || []
