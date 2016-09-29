@@ -74,7 +74,8 @@ isConfiguredCorrectly = (res) ->
 
 getFromJira = (robot, path, callback) ->
   robot.http("#{jiraUrl()}#{path}")
-    .header('Authorization', "Basic #{authPayload()}")
+#    .header('Authorization', "Basic #{authPayload()}")
+    .auth(process.env.HUBOT_JIRA_USERNAME, process.env.HUBOT_JIRA_PASSWORD)
     .get() callback
 
 fetchAndGenerate = (robot, fetchMethod, generateMethod) ->
